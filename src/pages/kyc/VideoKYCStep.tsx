@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { getKYCData, updateVideoKYC } from "@/lib/kyc-storage";
 
 interface VideoKYCStepProps {
+  onNext: () => void; // ✅ Added onNext prop
   onBack: () => void;
 }
 
@@ -32,7 +33,7 @@ const timeSlots = [
   "06:00 PM",
 ];
 
-export default function VideoKYCStep({ onBack }: VideoKYCStepProps) {
+export default function VideoKYCStep({ onNext, onBack }: VideoKYCStepProps) {
   const kycData = getKYCData();
   const videoKYC = kycData.videoKYC;
 
@@ -75,6 +76,20 @@ export default function VideoKYCStep({ onBack }: VideoKYCStepProps) {
       status: "pending",
     });
     toast.info("You can now select a new date and time");
+  };
+
+  // ✅ NEW: Handle completing Video KYC and moving to next step
+  const handleCompleteVideoKYC = () => {
+    updateVideoKYC({
+      ...videoKYC,
+      status: "completed",
+    });
+    toast.success("Video KYC Completed!", {
+      description: "Moving to Bank Approval step..."
+    });
+    setTimeout(() => {
+      onNext(); // ✅ Move to Step 5 (Bank Approval)
+    }, 1000);
   };
 
   return (
@@ -131,11 +146,31 @@ export default function VideoKYCStep({ onBack }: VideoKYCStepProps) {
               </ul>
             </div>
 
-            {videoKYC.status !== "completed" && (
-              <Button variant="outline" onClick={handleReschedule} className="w-full">
-                Reschedule Appointment
-              </Button>
-            )}
+            {/* ✅ NEW: Buttons section with conditional rendering */}
+            <div className="flex gap-3">
+              {videoKYC.status !== "completed" && (
+                <>
+                  <Button variant="outline" onClick={handleReschedule} className="flex-1">
+                    Reschedule Appointment
+                  </Button>
+                  <Button 
+                    onClick={handleCompleteVideoKYC}
+                    className="flex-1 bg-gradient-hero hover:opacity-90"
+                  >
+                    Complete Video KYC
+                  </Button>
+                </>
+              )}
+              
+              {videoKYC.status === "completed" && (
+                <Button 
+                  onClick={onNext}
+                  className="w-full bg-gradient-hero hover:opacity-90"
+                >
+                  Continue to Bank Approval
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator";
 import { FileText } from "lucide-react";
 import { getKYCData, updateVerificationStatus } from "@/lib/kyc-storage";
 import { toast } from "sonner";
-import { format } from "date-fns";
 
 interface ReviewStepProps {
   onNext: () => void;
@@ -16,14 +15,23 @@ interface ReviewStepProps {
 export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
   const kycData = getKYCData();
   const [status, setStatus] = useState(kycData.verification.status);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const simulationStartedRef = useRef(false);
+  const onNextRef = useRef(onNext);
 
   useEffect(() => {
-    if (status === "under-review" && !isSimulating) {
-      setIsSimulating(true);
-      // Simulate backend verification (70% approval, 30% rejection for demo)
-      const delay = 5000 + Math.random() * 3000; // 5-8 seconds
+    onNextRef.current = onNext;
+  }, [onNext]);
+
+  useEffect(() => {
+    if (status === "under-review" && !simulationStartedRef.current) {
+      console.log("🎯 Starting verification simulation...");
+      simulationStartedRef.current = true;
+
+      const delay = 5000 + Math.random() * 3000;
+      console.log("🎯 Simulation will complete in:", Math.round(delay / 1000), "seconds");
+
       const timer = setTimeout(() => {
+        console.log("🎯 Timer completed!");
         const approved = Math.random() > 0.3;
         const newStatus = approved ? "approved" : "rejected";
         const remarks = approved
@@ -32,21 +40,30 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
 
         updateVerificationStatus(newStatus, remarks);
         setStatus(newStatus);
-        setIsSimulating(false);
 
         if (approved) {
+          console.log("✅ KYC APPROVED - calling onNext in 100ms");
           toast.success("KYC Approved!");
+          setTimeout(() => {
+            console.log("✅ NOW calling onNextRef.current()");
+            onNextRef.current();
+          }, 100);
         } else {
+          console.log("❌ KYC REJECTED");
           toast.error("KYC Rejected");
         }
       }, delay);
 
-      return () => clearTimeout(timer);
+      return () => {
+        console.log("🧹 Cleanup: clearing verification timer");
+        clearTimeout(timer);
+      };
     }
-  }, [status, isSimulating]);
+  }, [status]);
 
   const handleContinue = () => {
     if (status === "approved") {
+      console.log("🔵 Manual continue clicked");
       onNext();
     } else {
       toast.error("Please wait for approval before proceeding");
@@ -55,6 +72,14 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
 
   const personalInfo = kycData.personalInfo!;
   const documents = kycData.documents!;
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -109,7 +134,7 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Date of Birth</p>
-              <p className="font-medium">{format(new Date(personalInfo.dob), "PPP")}</p>
+              <p className="font-medium">{formatDate(personalInfo.dob)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Gender</p>
@@ -148,7 +173,7 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Issue Date</p>
-              <p className="font-medium">{format(new Date(documents.issueDate), "PPP")}</p>
+              <p className="font-medium">{formatDate(documents.issueDate)}</p>
             </div>
           </div>
 

@@ -8,7 +8,7 @@ import NotFound from "./pages/NotFound";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import KYCDashboard from "./pages/KYCDashboard";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import  {ProtectedRoute}  from "./components/ProtectedRoute";
 import { getAuthState } from "./lib/auth";
 
 const queryClient = new QueryClient();

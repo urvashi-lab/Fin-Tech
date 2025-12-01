@@ -17,6 +17,7 @@ const steps: Step[] = [
   { number: 2, title: "Documents", description: "ID verification" },
   { number: 3, title: "Review", description: "Verification status" },
   { number: 4, title: "Video KYC", description: "Schedule call" },
+  { number: 5, title: "Bank Approval", description: "Final approval" },
 ];
 
 export const KYCStepper = ({ currentStep, completedSteps }: KYCStepperProps) => {

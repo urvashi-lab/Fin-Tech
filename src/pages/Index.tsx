@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, FileCheck, Video, CheckCircle } from "lucide-react";
+import { ShieldCheck, FileCheck, Video, CheckCircle,Building2} from "lucide-react";
 
 const Index = () => {
   return (
@@ -31,49 +31,62 @@ const Index = () => {
             Complete Your KYC Verification
           </h1>
           <p className="text-xl text-muted-foreground mb-8">
-            Fast, secure, and compliant identity verification in 4 simple steps
+            Fast, secure, and compliant identity verification in 5 simple steps
           </p>
           <Button size="lg" className="bg-gradient-hero hover:opacity-90 transition-opacity text-lg px-8" asChild>
             <Link to="/signup">Start Verification</Link>
           </Button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-16">
-          {[
-            {
-              icon: FileCheck,
-              title: "Personal Info",
-              description: "Provide your basic details and contact information",
-            },
-            {
-              icon: ShieldCheck,
-              title: "Documents",
-              description: "Upload Aadhar and PAN cards securely",
-            },
-            {
-              icon: CheckCircle,
-              title: "Review",
-              description: "Automated verification of your documents",
-            },
-            {
-              icon: Video,
-              title: "Video KYC",
-              description: "Schedule a quick video verification call",
-            },
-          ].map((step, index) => (
-            <Card key={index} className="text-center shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3">
-                  <step.icon className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-lg">{step.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>{step.description}</CardDescription>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-16">
+  {[
+    {
+      icon: FileCheck,
+      title: "Personal Info",
+      description: "Provide your basic details and contact information",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Documents",
+      description: "Upload Aadhar and PAN cards securely",
+    },
+    {
+      icon: CheckCircle,
+      title: "Review",
+      description: "Automated verification of your documents",
+    },
+    {
+      icon: Video,
+      title: "Video KYC",
+      description: "Schedule a quick video verification call",
+    },
+    {
+      icon: Building2,
+      title: "Bank Approval",
+      description: "Please wait for the bank to approve your KYC submission",
+    },
+  ].map((step, index) => {
+    const Icon = step.icon; // ✅ Correct JSX-safe way
+
+    return (
+      <Card
+        key={index}
+        className="text-center shadow-md hover:shadow-lg transition-shadow"
+      >
+        <CardHeader>
+          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3">
+            <Icon className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="text-lg">{step.title}</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <CardDescription>{step.description}</CardDescription>
+        </CardContent>
+      </Card>
+    );
+  })}
+</div>
 
         <Card className="max-w-3xl mx-auto shadow-lg bg-gradient-card">
           <CardHeader>

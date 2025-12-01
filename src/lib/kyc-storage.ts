@@ -30,12 +30,21 @@ export interface VideoKYC {
   status: "pending" | "scheduled" | "completed";
 }
 
+// ✅ NEW: Bank Approval Interface
+export interface BankApproval {
+  status: "pending" | "approved" | "rejected";
+  remarks: string;
+  timestamp: string | null;
+  applicationId?: string;
+}
+
 export interface KYCData {
   currentStep: number;
   personalInfo: PersonalInfo | null;
   documents: DocumentInfo | null;
   verification: VerificationStatus;
   videoKYC: VideoKYC;
+  bankApproval?: BankApproval; // ✅ NEW: Added bank approval
   completedSteps: number[];
 }
 
@@ -61,6 +70,11 @@ export const getKYCData = (): KYCData => {
       timeSlot: null,
       link: null,
       status: "pending",
+    },
+    bankApproval: {
+      status: "pending",
+      remarks: "",
+      timestamp: null,
     },
     completedSteps: [],
   };
@@ -118,7 +132,33 @@ export const updateVideoKYC = (videoKYC: VideoKYC): void => {
   const current = getKYCData();
   saveKYCData({
     videoKYC,
+    currentStep: Math.max(current.currentStep, 5), // ✅ Move to step 5
     completedSteps: [...new Set([...current.completedSteps, 4])],
+    bankApproval: {
+      status: "pending",
+      remarks: "",
+      timestamp: null,
+    },
+  });
+};
+
+// ✅ NEW: Bank Approval Update Function
+export const updateBankApprovalStatus = (
+  status: "pending" | "approved" | "rejected",
+  remarks: string
+): void => {
+  const current = getKYCData();
+  saveKYCData({
+    bankApproval: {
+      status,
+      remarks,
+      timestamp: new Date().toISOString(),
+      applicationId: `KYC-${Date.now().toString().slice(-8)}`,
+    },
+    completedSteps:
+      status === "approved"
+        ? [...new Set([...current.completedSteps, 5])]
+        : current.completedSteps,
   });
 };
 
@@ -126,7 +166,8 @@ export const resetKYC = (): void => {
   localStorage.removeItem(KYC_STORAGE_KEY);
 };
 
+// ✅ UPDATED: Changed from 4 to 5 total steps
 export const getCompletionPercentage = (): number => {
   const data = getKYCData();
-  return (data.completedSteps.length / 4) * 100;
+  return (data.completedSteps.length / 5) * 100;
 };
