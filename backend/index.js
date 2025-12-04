@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
+import docRoutes from './routes/docRoutes.js';
 import personalInfoRoutes from './routes/personalInfoRoutes.js'; // ✅ ADD THIS
 
 dotenv.config();
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/document', docRoutes);
 app.use('/api', personalInfoRoutes); // ✅ ADD THIS
 
 app.listen(PORT, () => {
