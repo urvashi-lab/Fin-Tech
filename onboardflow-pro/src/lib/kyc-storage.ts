@@ -1,7 +1,7 @@
 export interface DocumentInfo {
   aadharFront: string | null;
   aadharBack: string | null;
-  panCard: string | null;
+  panFront: string | null;
   aadharNumber: string;
   panNumber: string;
   issueDate: string;
@@ -150,12 +150,76 @@ export const updatePersonalInfo = async (info: PersonalInfo): Promise<boolean> =
   }
 };
 
-// ===== TEMPORARY: OTHER FUNCTIONS STILL USE LOCALSTORAGE =====
-// TODO: Convert these to API calls when backend is ready
+// ===== DOCUMENTS API CALLS =====
+
+export const getDocuments = async (): Promise<DocumentInfo | null> => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/document`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error('Failed to fetch documents');
+    }
+
+    const result = await response.json();
+    const data = result.document;
+    
+    return {
+      aadharFront: data.aadharFront,
+      aadharBack: data.aadharBack,
+      panFront: data.panFront,
+      aadharNumber: data.aadharNumber,
+      panNumber: data.panNumber,
+      issueDate: data.issueDate,
+    };
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    return null;
+  }
+};
+
+// ===== COMBINED API CALL FOR KYC DATA =====
+
+export const getKYCDataFromAPI = async (): Promise<KYCData> => {
+  // Fetch personal info and documents from API
+  const [personalInfo, documents] = await Promise.all([
+    getPersonalInfo(),
+    getDocuments(),
+  ]);
+
+  // Get verification, videoKYC, and bankApproval from localStorage (temporary)
+  const localData = getKYCDataFromLocalStorage();
+
+  return {
+    currentStep: localData.currentStep,
+    personalInfo,
+    documents,
+    verification: localData.verification,
+    videoKYC: localData.videoKYC,
+    bankApproval: localData.bankApproval,
+    completedSteps: localData.completedSteps,
+  };
+};
+
+// ===== TEMPORARY: LOCALSTORAGE FUNCTIONS =====
+// These are used for verification, videoKYC, bankApproval until backend is ready
 
 const KYC_STORAGE_KEY = "kyc_data";
 
-export const getKYCData = (): KYCData => {
+const getKYCDataFromLocalStorage = (): KYCData => {
   const stored = localStorage.getItem(KYC_STORAGE_KEY);
   if (stored) {
     return JSON.parse(stored);
@@ -185,14 +249,20 @@ export const getKYCData = (): KYCData => {
   };
 };
 
+// DEPRECATED: Use getKYCDataFromAPI() instead
+// Keeping this for backward compatibility with other components
+export const getKYCData = (): KYCData => {
+  return getKYCDataFromLocalStorage();
+};
+
 export const saveKYCData = (data: Partial<KYCData>): void => {
-  const current = getKYCData();
+  const current = getKYCDataFromLocalStorage();
   const updated = { ...current, ...data };
   localStorage.setItem(KYC_STORAGE_KEY, JSON.stringify(updated));
 };
 
 export const updateDocuments = (docs: DocumentInfo): void => {
-  const current = getKYCData();
+  const current = getKYCDataFromLocalStorage();
   saveKYCData({
     documents: docs,
     currentStep: Math.max(current.currentStep, 3),
@@ -209,7 +279,7 @@ export const updateVerificationStatus = (
   status: "approved" | "rejected",
   remarks: string
 ): void => {
-  const current = getKYCData();
+  const current = getKYCDataFromLocalStorage();
   saveKYCData({
     verification: {
       status,
@@ -225,7 +295,7 @@ export const updateVerificationStatus = (
 };
 
 export const updateVideoKYC = (videoKYC: VideoKYC): void => {
-  const current = getKYCData();
+  const current = getKYCDataFromLocalStorage();
   saveKYCData({
     videoKYC,
     currentStep: Math.max(current.currentStep, 5),
@@ -242,7 +312,7 @@ export const updateBankApprovalStatus = (
   status: "pending" | "approved" | "rejected",
   remarks: string
 ): void => {
-  const current = getKYCData();
+  const current = getKYCDataFromLocalStorage();
   saveKYCData({
     bankApproval: {
       status,
@@ -262,6 +332,6 @@ export const resetKYC = (): void => {
 };
 
 export const getCompletionPercentage = (): number => {
-  const data = getKYCData();
+  const data = getKYCDataFromLocalStorage();
   return (data.completedSteps.length / 5) * 100;
 };

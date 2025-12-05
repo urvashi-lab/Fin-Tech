@@ -140,7 +140,7 @@
 import express from "express";
 import { authenticate } from "../middleware/authmiddleware.js";
 import upload from "../middleware/uploadmiddleware.js";
-import { uploadDocuments } from "../controller/documentController.js";
+import { uploadDocuments, getDocuments } from "../controller/documentController.js";
 
 const router = express.Router();
 
@@ -153,6 +153,11 @@ router.post(
     { name: "panFront", maxCount: 1 },
   ]),
   uploadDocuments
+);
+router.get(
+  "/",
+  authenticate,
+  getDocuments
 );
 
 export default router;
