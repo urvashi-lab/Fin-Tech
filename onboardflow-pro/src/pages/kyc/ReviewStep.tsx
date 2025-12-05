@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
-import { FileText } from "lucide-react";
-import { getKYCData, updateVerificationStatus } from "@/lib/kyc-storage";
+import { FileText, Loader2, AlertCircle } from "lucide-react";
+import { getKYCData, getKYCDataFromAPI, updateVerificationStatus } from "@/lib/kyc-storage";
 import { toast } from "sonner";
+import type { KYCData } from "@/lib/kyc-storage";
 
 interface ReviewStepProps {
   onNext: () => void;
@@ -13,8 +14,11 @@ interface ReviewStepProps {
 }
 
 export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
-  const kycData = getKYCData();
-  const [status, setStatus] = useState(kycData.verification.status);
+  const [kycData, setKycData] = useState<KYCData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<"pending" | "under-review" | "approved" | "rejected">("pending");
+  
   const simulationStartedRef = useRef(false);
   const onNextRef = useRef(onNext);
 
@@ -22,8 +26,43 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
     onNextRef.current = onNext;
   }, [onNext]);
 
+  // Fetch KYC data from API on mount
   useEffect(() => {
-    if (status === "under-review" && !simulationStartedRef.current) {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const data = await getKYCDataFromAPI();
+        
+        // Validate that we have the required data
+        if (!data.personalInfo) {
+          setError("Personal information not found. Please complete the Personal Information step first.");
+          return;
+        }
+        
+        if (!data.documents) {
+          setError("Documents not found. Please complete the Document Upload step first.");
+          return;
+        }
+        
+        setKycData(data);
+        setStatus(data.verification.status);
+        
+      } catch (err) {
+        console.error("Error fetching KYC data:", err);
+        setError("Failed to load KYC data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Verification simulation logic
+  useEffect(() => {
+    if (status === "under-review" && !simulationStartedRef.current && kycData) {
       console.log("🎯 Starting verification simulation...");
       simulationStartedRef.current = true;
 
@@ -59,7 +98,7 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
         clearTimeout(timer);
       };
     }
-  }, [status]);
+  }, [status, kycData]);
 
   const handleContinue = () => {
     if (status === "approved") {
@@ -70,9 +109,6 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
     }
   };
 
-  const personalInfo = kycData.personalInfo!;
-  const documents = kycData.documents!;
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -80,6 +116,54 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
       day: 'numeric' 
     });
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-lg text-muted-foreground">Loading your KYC information...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !kycData) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-destructive/10 border-destructive/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+              <div className="space-y-2 flex-1">
+                <p className="text-sm text-destructive font-medium">
+                  {error || "Unable to load KYC data"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Please ensure you've completed all previous steps before proceeding to review.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="flex justify-between pt-4">
+          <Button type="button" variant="outline" onClick={onBack}>
+            Go Back
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const personalInfo = kycData.personalInfo!;
+  const documents = kycData.documents!;
 
   return (
     <div className="space-y-6">
@@ -218,16 +302,16 @@ export default function ReviewStep({ onNext, onBack }: ReviewStepProps) {
                   <p className="text-xs text-center text-muted-foreground">Aadhar Back</p>
                 </div>
               )}
-              {documents.panCard && (
+              {documents.panFront && (
                 <div className="space-y-2">
                   <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
-                    {documents.panCard.includes("pdf") ? (
+                    {documents.panFront.includes("pdf") ? (
                       <div className="flex items-center justify-center h-full">
                         <FileText className="h-12 w-12 text-muted-foreground" />
                       </div>
                     ) : (
                       <img
-                        src={documents.panCard}
+                        src={documents.panFront}
                         alt="PAN Card"
                         className="w-full h-full object-cover"
                       />
