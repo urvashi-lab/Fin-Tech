@@ -6,9 +6,9 @@ import { aadharverification , panverification } from "../controller/kycControlle
 const router = express.Router();
 
 // VERIFY AADHAAR BACK QR
-router.post("/verify/aadhar/back/:userId", authenticate, aadharverification)
+router.post("/verify/aadhar/back", authenticate, aadharverification)
 
 // VERIFY PAN CARD
-router.post("/verify/pancard/:userId", authenticate, panverification);
+router.post("/verify/pancard", authenticate, panverification);
     
 export default router;

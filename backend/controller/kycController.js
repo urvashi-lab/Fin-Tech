@@ -1,20 +1,20 @@
-
 import axios from "axios";
 import Document from "../models/doc.js";
 import Result from "../models/result.js";
 
 const FASTAPI_BASE = "https://prishaa-techfiesta-kyc.hf.space";
 
-
-
 // VERIFY AADHAAR
 export const aadharverification = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const userId = req.user.id;
 
         const doc = await Document.findOne({ userId });
         if (!doc) {
-            return res.status(404).json({ status: "error", message: "Documents not found" });
+            return res.status(404).json({ 
+                success: false, 
+                message: "Documents not found" 
+            });
         }
 
         console.log("Aadhaar Back URL:", doc.aadharBack);
@@ -33,51 +33,56 @@ export const aadharverification = async (req, res) => {
             {
                 $set: {
                     aadharVerificationStatus: "Verified",
-                    aadharCheckResult:"Verified successfully"
+                    aadharCheckResult: "Verified successfully"
                 }
             },
             { upsert: true, new: true }
         );
 
         return res.status(200).json({
-            status: "success",
+            success: true,
+            message: "Aadhar verified successfully",
             data: response.data
         });
 
     } catch (err) {
         console.log("ERROR:", err.response?.data || err.message);
 
+        // FIX: Convert error object to string properly
+        const errorMessage = typeof err.response?.data === 'object' 
+            ? JSON.stringify(err.response.data) 
+            : (err.response?.data || err.message || "Aadhar verification failed");
+
         // Update DB → Rejected
         await Result.findOneAndUpdate(
-            { userId: req.params.userId },
+            { userId: req.user.id },
             {
                 $set: {
                     aadharVerificationStatus: "Rejected",
-                    aadharCheckResult: err.response?.data || err.message
+                    aadharCheckResult: errorMessage
                 }
             },
             { upsert: true }
         );
 
         return res.status(500).json({
-            status: "error",
-            message: err.response?.data || err.message
+            success: false,
+            message: err.response?.data?.error || err.message || "Aadhar verification failed"
         });
     }
 };
 
-
-
-
 // VERIFY PAN
-
 export const panverification = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const userId = req.user.id;
 
         const doc = await Document.findOne({ userId });
         if (!doc) {
-            return res.status(404).json({ status: "error", message: "Documents not found" });
+            return res.status(404).json({ 
+                success: false, 
+                message: "Documents not found" 
+            });
         }
 
         console.log("PAN Front URL:", doc.panFront);
@@ -103,28 +108,34 @@ export const panverification = async (req, res) => {
         );
 
         return res.status(200).json({
-            status: "success",
+            success: true,
+            message: "PAN verified successfully",
             data: response.data
         });
 
     } catch (err) {
         console.log("ERROR:", err.response?.data || err.message);
 
+        // FIX: Convert error object to string properly
+        const errorMessage = typeof err.response?.data === 'object' 
+            ? JSON.stringify(err.response.data) 
+            : (err.response?.data || err.message || "PAN verification failed");
+
         // Update DB → Rejected
         await Result.findOneAndUpdate(
-            { userId: req.params.userId },
+            { userId: req.user.id },
             {
                 $set: {
                     panVerificationStatus: "Rejected",
-                    panCheckResult: err.response?.data || err.message
+                    panCheckResult: errorMessage
                 }
             },
             { upsert: true }
         );
 
         return res.status(500).json({
-            status: "error",
-            message: err.response?.data || err.message
+            success: false,
+            message: err.response?.data?.error || err.message || "PAN verification failed"
         });
     }
 };

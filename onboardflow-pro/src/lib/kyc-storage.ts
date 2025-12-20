@@ -109,6 +109,7 @@ export const updatePersonalInfo = async (info: PersonalInfo): Promise<boolean> =
       fullName: info.fullName,
       dob: info.dob,
       gender: info.gender,
+      email: info.email,
       address: info.address,
       phone: info.mobile, // frontend uses 'mobile', backend uses 'phone'
     };
@@ -191,6 +192,104 @@ export const getDocuments = async (): Promise<DocumentInfo | null> => {
   }
 };
 
+// ===== VERIFICATION API CALLS (NEW - HITTING BACKEND) =====
+
+
+// ===== VERIFICATION API CALLS (FIXED) =====
+
+export const verifyAadhar = async (aadharNumber: string): Promise<{ success: boolean; message: string }> => {
+  console.log("🔵 verifyAadhar function called");
+  console.log("  - Aadhar Number:", aadharNumber);
+  
+  try {
+    const token = getAuthToken();
+    console.log("  - Token exists:", !!token);
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const url = `${API_BASE_URL}/kyc/verify/aadhar/back`;
+    console.log("  - API URL:", url);
+    console.log("  - Request body:", { aadharNumber });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ aadharNumber }),
+    });
+
+    console.log("  - Response status:", response.status);
+    console.log("  - Response ok:", response.ok);
+
+    const data = await response.json();
+    console.log("  - Response data:", data);
+    
+    const result = {
+      success: response.ok && data.success,
+      message: data.message || 'Aadhar verification completed',
+    };
+    
+    console.log("  - Final result:", result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error verifying Aadhar:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Aadhar verification failed due to network error',
+    };
+  }
+};
+
+export const verifyPAN = async (panNumber: string): Promise<{ success: boolean; message: string }> => {
+  console.log("🔵 verifyPAN function called");
+  console.log("  - PAN Number:", panNumber);
+  
+  try {
+    const token = getAuthToken();
+    console.log("  - Token exists:", !!token);
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const url = `${API_BASE_URL}/kyc/verify/pancard`;
+    console.log("  - API URL:", url);
+    console.log("  - Request body:", { panNumber });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ panNumber }),
+    });
+
+    console.log("  - Response status:", response.status);
+    console.log("  - Response ok:", response.ok);
+
+    const data = await response.json();
+    console.log("  - Response data:", data);
+    
+    const result = {
+      success: response.ok && data.success,
+      message: data.message || 'PAN verification completed',
+    };
+    
+    console.log("  - Final result:", result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error verifying PAN:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'PAN verification failed due to network error',
+    };
+  }
+};
 // ===== COMBINED API CALL FOR KYC DATA =====
 
 export const getKYCDataFromAPI = async (): Promise<KYCData> => {
@@ -214,8 +313,8 @@ export const getKYCDataFromAPI = async (): Promise<KYCData> => {
   };
 };
 
-// ===== TEMPORARY: LOCALSTORAGE FUNCTIONS =====
-// These are used for verification, videoKYC, bankApproval until backend is ready
+// ===== LOCALSTORAGE FUNCTIONS =====
+// These are used for verification status, videoKYC, bankApproval, steps tracking
 
 const KYC_STORAGE_KEY = "kyc_data";
 
@@ -275,6 +374,7 @@ export const updateDocuments = (docs: DocumentInfo): void => {
   });
 };
 
+// UPDATED: Now just updates localStorage after backend verification
 export const updateVerificationStatus = (
   status: "approved" | "rejected",
   remarks: string
