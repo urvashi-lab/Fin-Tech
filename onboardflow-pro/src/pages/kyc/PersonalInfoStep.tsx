@@ -55,31 +55,45 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
   });
 
   // Fetch existing data on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const existingData = await getPersonalInfo();
-        if (existingData) {
-          setFormData({
-            fullName: existingData.fullName || "",
-            dob: existingData.dob || "",
-            gender: existingData.gender || "",
-            address: existingData.address || "",
-            mobile: existingData.mobile || "",
-            email: existingData.email || "",
-            consent: existingData.consent || false,
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching personal info:", error);
-        toast.error("Failed to load existing data");
-      } finally {
-        setLoading(false);
+  // In the useEffect where you fetch data:
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const existingData = await getPersonalInfo();
+      console.log("📥 Raw data from getPersonalInfo():", existingData);
+      console.log("📧 Email value:", existingData?.email);
+      console.log("📧 Email type:", typeof existingData?.email);
+      console.log("📧 Email length:", existingData?.email?.length);
+      
+      if (existingData) {
+        const newFormData = {
+          fullName: existingData.fullName || "",
+          dob: existingData.dob || "",
+          gender: existingData.gender || "",
+          address: existingData.address || "",
+          mobile: existingData.mobile || "",
+          email: existingData.email || "",
+          consent: existingData.consent || false,
+        };
+        
+        console.log("📋 Setting form data to:", newFormData);
+        setFormData(newFormData);
+        
+        // Check after setting
+        setTimeout(() => {
+          console.log("📋 Form data after setState:", formData);
+        }, 100);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching personal info:", error);
+      toast.error("Failed to load existing data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchData();
+}, []);
 
   const validateField = (name: string, value: string) => {
     let error = "";
@@ -192,42 +206,53 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="dob">
-            Date of Birth <span className="text-destructive">*</span>
-          </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !formData.dob && "text-muted-foreground",
-                  errors.dob && touched.dob && "border-destructive"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.dob ? format(new Date(formData.dob), "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={formData.dob ? new Date(formData.dob) : undefined}
-                onSelect={(date) => {
-                  const dateStr = date ? format(date, "yyyy-MM-dd") : "";
-                  handleChange("dob", dateStr);
-                  handleBlur("dob", dateStr);
-                }}
-                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-          {errors.dob && touched.dob && (
-            <p className="text-sm text-destructive">{errors.dob}</p>
-          )}
-        </div>
+  <Label htmlFor="dob">
+    Date of Birth <span className="text-destructive">*</span>
+  </Label>
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button
+        id="dob"
+        variant="outline"
+        className={cn(
+          "w-full justify-start text-left font-normal",
+          !formData.dob && "text-muted-foreground",
+          errors.dob && touched.dob && "border-destructive"
+        )}
+      >
+        <CalendarIcon className="mr-2 h-4 w-4" />
+        {formData.dob ? format(new Date(formData.dob), "PPP") : "Pick a date"}
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-auto p-0" align="start">
+  <Calendar
+    mode="single"
+    selected={formData.dob ? new Date(formData.dob) : undefined}
+    onSelect={(date) => {
+      if (date) {
+        const dateStr = format(date, "yyyy-MM-dd");
+        handleChange("dob", dateStr);
+        handleBlur("dob", dateStr);
+      }
+    }}
+    disabled={(date) => 
+      date > new Date() || 
+      date < new Date("1900-01-01")
+    }
+    defaultMonth={formData.dob ? new Date(formData.dob) : new Date(2000, 0)}
+    captionLayout="dropdown-buttons"
+    fromYear={1900}
+    toYear={new Date().getFullYear()}
+    initialFocus
+    // Add this to hide the duplicate header
+    className="p-3"
+  />
+</PopoverContent>
+  </Popover>
+  {errors.dob && touched.dob && (
+    <p className="text-sm text-destructive">{errors.dob}</p>
+  )}
+</div>
 
         <div className="space-y-2">
           <Label htmlFor="gender">Gender</Label>

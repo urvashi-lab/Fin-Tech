@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, XCircle, Clock, Building2, Shield, FileCheck } from "lucide-react";
-import { getKYCData, updateBankApprovalStatus } from "@/lib/kyc-storage";
+import { CheckCircle2, XCircle, Clock, Building2, Shield, FileCheck, Loader2 } from "lucide-react";
+import { getKYCDataFromAPI, updateBankApprovalStatus, KYCData } from "@/lib/kyc-storage";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface BankApprovalStepProps {
   onNext: () => void;
@@ -13,8 +14,10 @@ interface BankApprovalStepProps {
 }
 
 export default function BankApprovalStep({ onNext, onBack }: BankApprovalStepProps) {
-  const kycData = getKYCData();
-  const [status, setStatus] = useState(kycData.bankApproval?.status || "pending");
+  const navigate = useNavigate();
+  const [kycData, setKycData] = useState<KYCData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [progress, setProgress] = useState(0);
   const simulationStartedRef = useRef(false);
   const onNextRef = useRef(onNext);
@@ -22,6 +25,24 @@ export default function BankApprovalStep({ onNext, onBack }: BankApprovalStepPro
   useEffect(() => {
     onNextRef.current = onNext;
   }, [onNext]);
+
+  // Load KYC data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getKYCDataFromAPI();
+        setKycData(data);
+        setStatus(data.bankApproval?.status || "pending");
+      } catch (error) {
+        console.error("Error loading KYC data:", error);
+        toast.error("Failed to load KYC data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   // Progress bar animation
   useEffect(() => {
@@ -39,41 +60,31 @@ export default function BankApprovalStep({ onNext, onBack }: BankApprovalStepPro
     }
   }, [status]);
 
-  // Bank approval simulation
+  // Bank approval simulation (HARDCODED TO APPROVE)
   useEffect(() => {
-    if (status === "pending" && !simulationStartedRef.current) {
-      console.log("🏦 Starting bank approval simulation...");
+    if (status === "pending" && !simulationStartedRef.current && kycData) {
+      console.log("🏦 Starting bank approval simulation (HARDCODED)...");
       simulationStartedRef.current = true;
 
-      const delay = 8000 + Math.random() * 4000; // 8-12 seconds
+      const delay = 8000; // Fixed 8 seconds
       console.log("🏦 Bank approval will complete in:", Math.round(delay / 1000), "seconds");
 
       const timer = setTimeout(() => {
         console.log("🏦 Bank approval timer completed!");
-        const approved = Math.random() > 0.2; // 80% approval rate
-        const newStatus = approved ? "approved" : "rejected";
-        const remarks = approved
-          ? "Your application has been approved by the bank. Welcome aboard!"
-          : "Your application requires additional review. Please contact customer support.";
+        
+        // HARDCODED: Always approve
+        const newStatus = "approved";
+        const remarks = "Your application has been approved by the bank. Welcome aboard!";
 
         updateBankApprovalStatus(newStatus, remarks);
         setStatus(newStatus);
 
-        if (approved) {
-          console.log("✅ BANK APPROVED - Application complete!");
-          toast.success("Bank Approval Successful!", {
-            description: "Your KYC process is now complete.",
-          });
-          setTimeout(() => {
-            console.log("✅ Calling onNextRef.current()");
-            onNextRef.current();
-          }, 2000);
-        } else {
-          console.log("❌ BANK REJECTED");
-          toast.error("Bank Approval Required", {
-            description: "Additional verification needed.",
-          });
-        }
+        console.log("✅ BANK APPROVED - Application complete!");
+        toast.success("Bank Approval Successful!", {
+          description: "Your KYC process is now complete.",
+        });
+        
+        
       }, delay);
 
       return () => {
@@ -81,18 +92,52 @@ export default function BankApprovalStep({ onNext, onBack }: BankApprovalStepPro
         clearTimeout(timer);
       };
     }
-  }, [status]);
+  }, [status, kycData]);
 
-  const handleContinue = () => {
-    if (status === "approved") {
-      console.log("🔵 Manual continue clicked - completing KYC");
-      onNext();
-    } else {
-      toast.error("Please wait for bank approval");
-    }
-  };
+ const handleContinue = () => {
+  if (status === "approved") {
+    console.log("🔵 Completing KYC - redirecting to success page");
+    navigate("/kyc-success");
+  } else {
+    toast.error("Please wait for bank approval");
+  }
+};
 
-  const personalInfo = kycData.personalInfo!;
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold">Bank Approval</h2>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <p className="text-muted-foreground">Loading KYC data...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Check if previous steps are completed
+  if (!kycData?.personalInfo) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold">Bank Approval</h2>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground text-center">
+              Please complete previous steps first.
+            </p>
+          </CardContent>
+        </Card>
+        <Button onClick={onBack}>Back</Button>
+      </div>
+    );
+  }
+
+  const personalInfo = kycData.personalInfo;
 
   return (
     <div className="space-y-6">
@@ -227,7 +272,9 @@ export default function BankApprovalStep({ onNext, onBack }: BankApprovalStepPro
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Application ID</p>
-              <p className="font-medium font-mono">KYC-{Date.now().toString().slice(-8)}</p>
+              <p className="font-medium font-mono">
+                {kycData.bankApproval?.applicationId || `KYC-${Date.now().toString().slice(-8)}`}
+              </p>
             </div>
           </div>
 

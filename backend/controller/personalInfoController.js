@@ -30,13 +30,14 @@ export const getPersonalInfo = async (req, res) => {
 };
 
 // Update Personal Info
+// Update Personal Info
 export const updatePersonalInfo = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { fullName, dob, gender, address, phone } = req.body;
+    const { fullName, dob, gender, address, phone, email } = req.body; // ← ADD email
 
     // Validate required fields
-    if (!fullName || !dob || !address || !phone) {
+    if (!fullName || !dob || !address || !phone || !email) { // ← ADD email validation
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided',
@@ -52,6 +53,7 @@ export const updatePersonalInfo = async (req, res) => {
         dob: new Date(dob),
         gender,
         phone,
+        email, // ← ADD THIS LINE
         address,
       },
       { upsert: true, new: true, runValidators: true }

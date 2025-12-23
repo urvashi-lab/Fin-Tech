@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
-import { CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, AlertCircle, Video } from "lucide-react";
 
 interface StatusBadgeProps {
-  status: "pending" | "under-review" | "approved" | "rejected" | "scheduled" | "completed";
+  status: "pending" | "under-review" | "approved" | "rejected" | "scheduled" | "completed" | "in-progress";
   className?: string;
 }
 
@@ -37,6 +37,11 @@ export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
       label: "Completed",
       icon: CheckCircle2,
       className: "bg-success/10 text-success border-success/20",
+    },
+    "in-progress": {
+      label: "In Progress",
+      icon: Video,
+      className: "bg-blue-500/10 text-blue-600 border-blue-500/20",
     },
   };
 

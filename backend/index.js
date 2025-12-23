@@ -1,11 +1,12 @@
 import express from 'express';
+import { createServer } from 'http'; // ✅ Add this
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import docRoutes from './routes/docRoutes.js';
 import personalInfoRoutes from './routes/personalInfoRoutes.js'; 
-import APIRoutes from './routes/APIRoutes.js'; 
+import APIRoutes from './routes/APIRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -31,6 +32,9 @@ app.use('/api/document', docRoutes);
 app.use('/api', personalInfoRoutes); 
 app.use('/api/kyc', APIRoutes);
 
+
+// ✅ Use httpServer instead of app
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`Socket.IO server initialized`);
 });

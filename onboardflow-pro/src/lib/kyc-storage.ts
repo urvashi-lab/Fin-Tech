@@ -14,10 +14,7 @@ export interface VerificationStatus {
 }
 
 export interface VideoKYC {
-  date: string | null;
-  timeSlot: string | null;
-  link: string | null;
-  status: "pending" | "scheduled" | "completed";
+  status: "pending" | "in-progress" | "completed";
 }
 
 export interface BankApproval {
@@ -104,18 +101,14 @@ export const updatePersonalInfo = async (info: PersonalInfo): Promise<boolean> =
       throw new Error('No authentication token found');
     }
 
-    // Map frontend fields to backend fields
     const payload = {
       fullName: info.fullName,
       dob: info.dob,
       gender: info.gender,
       email: info.email,
       address: info.address,
-      phone: info.mobile, // frontend uses 'mobile', backend uses 'phone'
+      phone: info.mobile,
     };
-
-    console.log('API URL:', `${API_BASE_URL}/personal-info`);
-    console.log('Payload:', payload);
 
     const response = await fetch(`${API_BASE_URL}/personal-info`, {
       method: 'POST',
@@ -126,24 +119,26 @@ export const updatePersonalInfo = async (info: PersonalInfo): Promise<boolean> =
       body: JSON.stringify(payload),
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
-    // Get response text first to see what we're receiving
-    const responseText = await response.text();
-    console.log('Response text:', responseText);
-
     if (!response.ok) {
+      const responseText = await response.text();
       let errorData;
       try {
         errorData = JSON.parse(responseText);
       } catch {
-        throw new Error(`Server error: ${response.status} - ${responseText.substring(0, 100)}`);
+        throw new Error(`Server error: ${response.status}`);
       }
       throw new Error(errorData.message || 'Failed to update personal info');
     }
 
-    const result = JSON.parse(responseText);
+    const result = await response.json();
+    
+    // ✅ ADD THIS: Mark step 1 as completed in localStorage
+    const current = getKYCDataFromLocalStorage();
+    saveKYCData({
+      currentStep: Math.max(current.currentStep, 2),
+      completedSteps: [...new Set([...current.completedSteps, 1])], // Mark step 1 complete
+    });
+    
     return result.success;
   } catch (error) {
     console.error('Error updating personal info:', error);
@@ -334,9 +329,6 @@ const getKYCDataFromLocalStorage = (): KYCData => {
       reviewedAt: null,
     },
     videoKYC: {
-      date: null,
-      timeSlot: null,
-      link: null,
       status: "pending",
     },
     bankApproval: {
@@ -394,37 +386,88 @@ export const updateVerificationStatus = (
   });
 };
 
-export const updateVideoKYC = (videoKYC: VideoKYC): void => {
+export const updateVideoKYC = (updates: Partial<VideoKYC>): void => {
   const current = getKYCDataFromLocalStorage();
   saveKYCData({
-    videoKYC,
+    ...current,
+    videoKYC: {
+      ...current.videoKYC,
+      ...updates,
+    },
     currentStep: Math.max(current.currentStep, 5),
     completedSteps: [...new Set([...current.completedSteps, 4])],
-    bankApproval: {
-      status: "pending",
-      remarks: "",
-      timestamp: null,
-    },
   });
 };
+
+export const sendFrameForVerification = async (
+  frameData: string,
+  verificationType: "face" | "aadhaar-front" | "aadhaar-back" | "pan",
+  userId: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    console.log(`📤 [MOCK] Verifying ${verificationType} frame...`);
+    console.log(`📸 Frame data length: ${frameData.length} characters`);
+    
+    // Simulate API delay (optional - makes it feel more realistic)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // HARDCODED SUCCESS RESPONSE
+    const mockMessages = {
+      "face": "✅ Face verification successful",
+      "aadhaar-front": "✅ Aadhaar front side verified",
+      "aadhaar-back": "✅ Aadhaar back side verified",
+      "pan": "✅ PAN card verified successfully"
+    };
+
+    console.log(`📥 [MOCK] Verification passed for ${verificationType}`);
+
+    return {
+      success: true,
+      message: mockMessages[verificationType]
+    };
+    
+  } catch (error) {
+    console.error(`❌ Error in mock verification:`, error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Network error occurred'
+    };
+  }
+};
+
+/**
+ * TypeScript interface for verification result
+ */
+export interface VerificationResult {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Verification types enum for type safety
+ */
+export type VerificationType = "face" | "aadhaar-front" | "aadhaar-back" | "pan";
 
 export const updateBankApprovalStatus = (
   status: "pending" | "approved" | "rejected",
   remarks: string
 ): void => {
+  console.log("🏦 [MOCK] Updating bank approval status to:", status);
+  
   const current = getKYCDataFromLocalStorage();
+  
+  // HARDCODED: Always set to approved
   saveKYCData({
     bankApproval: {
-      status,
-      remarks,
+      status: "approved", // Force approved
+      remarks: "Your application has been approved by the bank. Welcome aboard!",
       timestamp: new Date().toISOString(),
       applicationId: `KYC-${Date.now().toString().slice(-8)}`,
     },
-    completedSteps:
-      status === "approved"
-        ? [...new Set([...current.completedSteps, 5])]
-        : current.completedSteps,
+    completedSteps: [...new Set([...current.completedSteps, 5])], // Always mark as complete
   });
+  
+  console.log("✅ [MOCK] Bank approval hardcoded to: approved");
 };
 
 export const resetKYC = (): void => {
