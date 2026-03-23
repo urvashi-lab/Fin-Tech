@@ -16,7 +16,7 @@ const storage = new CloudinaryStorage({
     else if (file.fieldname === 'panFront') {
       folderName = 'KYC/PANCard';
     }
-   
+  
 
     return {
       folder: folderName,
@@ -44,3 +44,14 @@ const upload = multer({
 
 export default upload;
 
+/*
+  else if (file.fieldname === 'selfie') {
+      folderName = 'VideoKYC/Selfies';
+    }
+    else if (file.fieldname === 'liveAadharCapture') {
+      folderName = 'VideoKYC/LiveAadhaar';
+    }
+    else if (file.fieldname === 'livePanCapture') {
+      folderName = 'VideoKYC/LivePAN';
+    }
+    */
